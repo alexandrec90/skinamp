@@ -13,7 +13,8 @@ def test_default_paths_sit_outside_the_install_root(monkeypatch, tmp_path):
 
 
 def test_default_paths_without_local_appdata(monkeypatch):
-    monkeypatch.delenv("LOCALAPPDATA")
+    # raising=False: the Linux gate has no LOCALAPPDATA to delete.
+    monkeypatch.delenv("LOCALAPPDATA", raising=False)
     assert default_paths().root.name == "SkinampData"
 
 
