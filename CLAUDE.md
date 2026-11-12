@@ -7,11 +7,14 @@ Orchestrate theming on windows and applications.
 | Layer | Choice |
 | --- | --- |
 | Language | Python 3.12 |
-| Database | PostgreSQL |
-| ORM / Migrations | SQLAlchemy 2 (async) + Alembic |
-| Container | Docker + Docker Compose |
+| Window | pywebview (WebView2) over plain HTML and JavaScript in `skinamp/gui/web/` |
+| Packaging | PyInstaller `--onedir`, Velopack |
+| Updates | Velopack, from GitHub Releases |
+| State | The JSON undo journal in `%LOCALAPPDATA%\SkinampData`; no database |
 | Tests | pytest |
 | Lint | ruff |
+
+Skinamp is a Windows desktop app with no server, no database and no containers.
 
 ## Environment Variables
 
@@ -19,10 +22,6 @@ See `.env.example` for every variable. `.env` is gitignored and holds this
 checkout's ports and credentials.
 
 ## Tooling
-
-> Everything in this section needs the local Docker Desktop daemon. If it isn't
-> running, make the code change and defer container/stack verification until it is
-> (or to CI). Run `docker ps` first — an `npipe`/daemon error means Desktop is stopped.
 
 ### Scripts and the vendored harness
 
@@ -51,11 +50,6 @@ terminal output — it scrolls away and buries the signal. Keep the terminal to 
 status line plus the artifact path; put everything needed to diagnose in the file.
 Write the artifact on failure too, not just success, and overwrite per run.
 
-### Docker subprocess calls
-
-- **`docker compose exec` must use `-T`** — without it a pseudo-TTY is allocated and
-  the subprocess handle can outlive the command, leaving the caller hung.
-
 ## Testing
 
 **`.claude/rules/engineering.md`** is the authority: tests ship in the same commit,
@@ -66,9 +60,33 @@ Add this project's specifics *below* — fixtures, isolation rules, markers, wha
 and where — but do not restate the policy above. It is vendored and drift-gated; a copy
 here is a fork that will disagree with it the first time either is edited.
 
+- **Mock at one seam: `System`.** `tests/fakes.py` is an in-memory `System`, so everything
+  above that boundary runs for real on the Linux gate.
+- **`tests/test_win32.py` is the only test of real Windows calls.** It runs in the gate's
+  Windows job and must never change how the machine looks: registry tests use the scratch
+  key from `key_prefix`, everything else only reads.
+- **Never run `apply` or `revert` against the real desktop from a test or a session
+  without asking.** `python -m skinamp plan retro` is read-only and safe.
+
 ## Guardrails
 
 Baseline guardrails — including the instruction-file feedback loop (**never silently
 work around a bad instruction**) — are in `.claude/rules/engineering.md`. Rules for
 writing skills and rules themselves are in `.claude/rules/authoring.md`. Cross-reference
 this project's own scoped rules here, one line each.
+
+- **Undo is the product.** A change that is not an `Effect` in the journal cannot be undone,
+  so nothing changes the machine any other way.
+- **The journal format and every shipped effect `kind` are forever.** An update can land
+  while a theme is applied, so later releases must keep restoring what earlier ones wrote.
+  The golden tests in `tests/test_journal.py` and `tests/test_effects.py` hold this.
+- **Skinamp itself never runs elevated.** An elevated process can be another user, with a
+  different HKCU. What truly needs admin is a `machine_*` call on `System`, queued for the
+  one UAC prompt `run_elevated` brings up, and limited by the allow-list in
+  `skinamp/elevated.py`. Say so to the user with `Component.needs_admin`.
+- **Test on a real desktop before calling it working.** The fake cannot show what Windows
+  ignores. Applying Retro live found per-user `Shell Icons` doing nothing, animation
+  settings reading as off over RDP, a cursor reload that always failed, and Windows turning
+  Spotlight back off in the middle of an undo. Compare against
+  an independent snapshot, not the journal: the journal only knows what it recorded.
+- **Original art only.** Never bundle cursors, icons or fonts from any operating system.

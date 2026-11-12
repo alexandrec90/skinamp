@@ -55,7 +55,9 @@ head_bytes = 2000
 # `.devkit-structure.txt`, which is committed and may only shrink; the limits below
 # are the script's `DEFAULT_LIMITS` and are shown so a project can see what it holds
 # to. Every key is optional; an unknown limit or rule name is a configuration error.
-#[structure]
+[structure]
+# Loaded by the page's <script> tag, so no import reaches it.
+entrypoints = ["skinamp/gui/web/"]
 #paths = ["skinamp/", "scripts/"]       # defaults to the app tree, scripts/ and the frontend src
 #exclude = ["skinamp/migrations/"]      # generated code the project does not answer for
 #entrypoints = ["skinamp/plugins/"]     # loaded by name, so the orphan rule must not see them
@@ -100,28 +102,6 @@ head_bytes = 2000
 #pattern = "\\.execute\\("
 #paths = ["skinamp/"]
 #only_in = ["skinamp/repositories/"]
-
-# Tier 2b: host pytest against the DB over its published compose port.
-#
-# NOTE the port. `db_port` is the *host* port, so it differs per worktree — this
-# file is committed and shared across worktrees, which means the value below is
-# only right for the primary checkout. A worktree stack publishes
-# `5437 + its slot` (see devkit's ports.toml); if you run host pytest from
-# a worktree, export DB_HOST_PORT to override.
-[db]
-enabled = true
-services = ["db"]
-db_service = "db"
-db_port = 5437
-# Mirrors docker-compose.yml's POSTGRES_* and the PR gate's env block.
-user = "skinamp"
-password = "skinamp_local_dev" # pragma: allowlist secret
-name = "skinamp"
-url_scheme = "postgresql+psycopg"
-url_env = ["DATABASE_URL"]
-
-# Extra env for host pytest: name -> default. An already-set os.environ wins.
-[db.test_env]
 
 [frontend]
 enabled = false
