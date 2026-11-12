@@ -85,32 +85,6 @@ jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
-    # Google's mirror of the Docker Official Images, not Docker Hub or ECR Public: a
-    # hosted runner pulls anonymously on a shared IP, and both answer `toomanyrequests`
-    # once strangers spend its quota, failing the job before a test runs (social-scraper,
-    # 2026-10-09 and 2026-10-18). tests/test_workflow_images.py in devkit.
-    services:
-      db:
-        image: mirror.gcr.io/library/postgres:18
-        env:
-          POSTGRES_USER: skinamp
-          POSTGRES_PASSWORD: skinamp_local_dev # pragma: allowlist secret
-          POSTGRES_DB: skinamp
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      # CI always talks to the service container on its conventional port — the
-      # slot offsets in ports.toml exist to deconflict LOCAL stacks, and have no
-      # meaning on a runner where this job is the only thing running.
-      # The `pragma` below must stay on the same line as the value — detect-secrets matches
-      # its allowlist comment per-line, so a comment above the finding does nothing. These
-      # are the credentials of a service container that lives for one job.
-      DATABASE_URL: postgresql+psycopg://skinamp:skinamp_local_dev@127.0.0.1:5432/skinamp # pragma: allowlist secret
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-python-env
@@ -118,8 +92,6 @@ jobs:
           # Explicit at every call site: the action is copied from devkit verbatim
           # rather than rendered, so its own default cannot know this project's version.
           python-version: "3.12"
-      - name: Apply migrations
-        run: uv run python -m alembic upgrade head
       - name: Application suite
         id: application-suite
         run: uv run python scripts/run-tests.py
@@ -139,6 +111,21 @@ jobs:
           path: |
             logs/test-failures.log
             logs/junit-hooks.xml
+
+  windows:
+    name: Windows backend
+    # The job above is Linux, where `tests/test_win32.py` skips itself. This is the only
+    # place that real registry, COM and shell code runs before a release.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-python-env
+        with:
+          # Explicit at every call site: the action is copied from devkit verbatim
+          # rather than rendered, so its own default cannot know this project's version.
+          python-version: "3.12"
+      - name: Windows backend tests
+        run: uv run python -m pytest tests/test_win32.py -q
 
   devkit-drift:
     name: Vendored harness drift

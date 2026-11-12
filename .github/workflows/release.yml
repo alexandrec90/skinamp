@@ -1,0 +1,63 @@
+name: Release
+
+# Pushing a tag like v1.2.3 publishes that version. Installed copies find it through
+# GitHub Releases, so publishing here IS shipping an update to every user.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+# One release at a time per tag, and never cancelled: stopping a publish part-way could
+# leave a release whose feed and packages disagree, which is what installed copies read.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup-python-env
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: "9.0.x"
+      - name: Install vpk
+        run: dotnet tool install --global vpk --version 1.2.161
+      - name: Fetch the previous release
+        # Without this the first run has nothing to diff, and every later one would ship
+        # full packages instead of small delta updates. Nothing published yet is not a failure.
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            vpk download github --repoUrl "https://github.com/$GITHUB_REPOSITORY" --outputDir releases --token "$GH_TOKEN"
+          fi
+      - name: Build and pack
+        run: uv run python scripts/build-release.py --pack --version ${{ github.ref_name }}
+      - name: Upload build failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-failure
+          path: logs/build-failure.log
+      - name: Publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          vpk upload github
+          --repoUrl "https://github.com/$GITHUB_REPOSITORY"
+          --outputDir releases
+          --publish
+          --releaseName "Skinamp ${{ github.ref_name }}"
+          --tag "${{ github.ref_name }}"
+          --token "$GH_TOKEN"

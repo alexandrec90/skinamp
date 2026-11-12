@@ -1,6 +1,6 @@
 """`scripts/e2e.py`: the local tier's runner and the contract devkit's nightly job reads.
 
-These run in the ordinary suite: the runner is faked, so no Docker and no `local` test.
+These run in the ordinary suite: the runner is faked, so no desktop and no `local` test.
 """
 
 from __future__ import annotations
@@ -39,12 +39,12 @@ def junit(*cases: str) -> str:
 
 
 def passed(name: str = "test_ok") -> str:
-    return f'<testcase classname="tests.test_database_e2e" name="{name}"/>'
+    return f'<testcase classname="tests.test_desktop_e2e" name="{name}"/>'
 
 
 def ended(tag: str, name: str, message: str) -> str:
     return (
-        f'<testcase classname="tests.test_database_e2e" name="{name}">'
+        f'<testcase classname="tests.test_desktop_e2e" name="{name}">'
         f'<{tag} message="{message}">detail</{tag}></testcase>'
     )
 
@@ -89,7 +89,7 @@ def test_named_ids_replace_the_tests_directory() -> None:
 @pytest.mark.parametrize(
     ("classname", "name", "ident"),
     [
-        ("tests.test_database_e2e", "test_a", "tests/test_database_e2e.py::test_a"),
+        ("tests.test_desktop_e2e", "test_a", "tests/test_desktop_e2e.py::test_a"),
         ("tests.test_x.TestY", "test_z", "tests/test_x.py::TestY::test_z"),
         ("", "tests.test_broken", "tests.test_broken"),
         ("tests.test_x", "test_p[a b]", "tests/test_x.py::test_p[a_b]"),
@@ -151,14 +151,14 @@ def test_a_failure_exits_with_pytests_code_and_names_the_test(
 ) -> None:
     code, _ = run_e2e(e2e, junit(passed(), ended("failure", "test_bad", "boom")), code=1)
     assert code == 1
-    assert "FAILED tests/test_database_e2e.py::test_bad - boom" in capsys.readouterr().out
+    assert "FAILED tests/test_desktop_e2e.py::test_bad - boom" in capsys.readouterr().out
 
 
 def test_a_fixture_error_is_printed_as_failed(
     e2e: ModuleType, capsys: pytest.CaptureFixture[str]
 ) -> None:
     run_e2e(e2e, junit(ended("error", "test_down", "daemon not running")), code=1)
-    assert "FAILED tests/test_database_e2e.py::test_down - daemon" in capsys.readouterr().out
+    assert "FAILED tests/test_desktop_e2e.py::test_down - daemon" in capsys.readouterr().out
 
 
 def test_a_skip_is_listed_by_hand_and_fails_under_the_scheduler(
@@ -166,12 +166,12 @@ def test_a_skip_is_listed_by_hand_and_fails_under_the_scheduler(
 ) -> None:
     report = junit(passed(), ended("skipped", "test_s", "no docker"))
     assert run_e2e(e2e, report)[0] == 0
-    assert "SKIPPED tests/test_database_e2e.py::test_s - skipped: no docker" in (
+    assert "SKIPPED tests/test_desktop_e2e.py::test_s - skipped: no docker" in (
         capsys.readouterr().out
     )
     assert run_e2e(e2e, report, env={e2e.ENV_FLAG: "1"})[0] == 1
     out = capsys.readouterr().out
-    assert "FAILED tests/test_database_e2e.py::test_s - skipped: no docker" in out
+    assert "FAILED tests/test_desktop_e2e.py::test_s - skipped: no docker" in out
     assert "skipped under the scheduled run" in out
 
 
@@ -190,8 +190,8 @@ def test_a_stale_report_cannot_answer_for_this_run(e2e: ModuleType) -> None:
 
 
 def test_named_ids_reach_pytest(e2e: ModuleType) -> None:
-    _, calls = run_e2e(e2e, junit(passed()), argv=["tests/test_database_e2e.py::test_ok"])
-    assert "tests/test_database_e2e.py::test_ok" in calls[0]
+    _, calls = run_e2e(e2e, junit(passed()), argv=["tests/test_desktop_e2e.py::test_ok"])
+    assert "tests/test_desktop_e2e.py::test_ok" in calls[0]
 
 
 def test_output_a_cp1252_console_cannot_encode_is_escaped(
