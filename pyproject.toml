@@ -44,8 +44,15 @@ testpaths = ["tests/"]
 # No `-q` in `addopts`: an agent adds its own, and `-qq` drops the "N passed" line.
 # `-p devkit_temproot` is the vendored plugin giving each run a temp root of its own, so a
 # run elsewhere on the machine cannot fail this one at exit; `pythonpath` is where it lives.
-addopts = "-p devkit_temproot"
+# `-m "not local"` keeps the local end-to-end tier out of every run but its own: those
+# tests need this workstation (its signed-in Windows desktop), which no hosted runner has, and
+# deselection rather than a skip is what keeps them off one. `scripts/e2e.py` runs them,
+# its `-m local` replacing this one (`.claude/rules/local-e2e.md`).
+addopts = '-m "not local" -p devkit_temproot'
 pythonpath = ["scripts/pytest-plugins"]
+markers = [
+  "local: needs this workstation (its Windows desktop), not a runner; run nightly by scripts/e2e.py",
+]
 
 [tool.mypy]
 python_version = "3.12"
