@@ -66,6 +66,10 @@ Add this project's specifics *below* — fixtures, isolation rules, markers, wha
 and where — but do not restate the policy above. It is vendored and drift-gated; a copy
 here is a fork that will disagree with it the first time either is edited.
 
+- **`local` marker:** a test that needs the Docker stack carries `pytest.mark.local`;
+  `addopts` deselects it everywhere and `python scripts/e2e.py` runs exactly that tier
+  (`.claude/rules/local-e2e.md`). `tests/test_database_e2e.py` is its end-to-end test.
+
 ## Guardrails
 
 Baseline guardrails — including the instruction-file feedback loop (**never silently
