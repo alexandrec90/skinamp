@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Skinamp</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="window">
+      <header class="titlebar">Skinamp</header>
+      <div class="body">
+        <section class="panel" aria-label="Theme">
+          <label for="theme">Theme</label>
+          <select id="theme"></select>
+          <p id="theme-description"></p>
+          <div id="preview" class="preview"></div>
+        </section>
+
+        <fieldset class="panel">
+          <legend>What to change</legend>
+          <div id="components"></div>
+        </fieldset>
+
+        <section class="status" role="status" aria-live="polite">
+          <strong id="status-title"></strong>
+          <p id="status-detail"></p>
+        </section>
+
+        <div id="update" class="update" hidden>
+          <span id="update-text"></span>
+          <button id="restart" type="button">Restart now</button>
+        </div>
+
+        <footer class="actions">
+          <button id="apply" type="button" class="primary">Apply theme</button>
+          <button id="revert" type="button">Undo everything</button>
+        </footer>
+        <small id="version"></small>
+      </div>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>

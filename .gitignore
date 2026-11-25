@@ -25,6 +25,11 @@ htmlcov/
 *.pem
 *.key
 
+# Build output: PyInstaller's work and result, and Velopack's installer and update feed.
+/build/
+/dist/
+/releases/
+
 # Runtime output. `logs/` holds the diagnostic artifacts the fixer skills read;
 # they are regenerated on every run and must never be committed.
 logs/

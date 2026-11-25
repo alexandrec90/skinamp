@@ -41,26 +41,6 @@ jobs:
   full-suite:
     name: Full suite
     runs-on: ubuntu-latest
-    # mirror.gcr.io, not Docker Hub or ECR Public: see the same block in pr-gate.yml.
-    services:
-      db:
-        image: mirror.gcr.io/library/postgres:18
-        env:
-          POSTGRES_USER: skinamp
-          POSTGRES_PASSWORD: skinamp_local_dev # pragma: allowlist secret
-          POSTGRES_DB: skinamp
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    env:
-      # The `pragma` must stay on the same line as the value — detect-secrets matches
-      # its allowlist comment per-line. These are the credentials of a service
-      # container that lives for one job.
-      DATABASE_URL: postgresql+psycopg://skinamp:skinamp_local_dev@127.0.0.1:5432/skinamp # pragma: allowlist secret
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-python-env
@@ -68,8 +48,6 @@ jobs:
           # Explicit at every call site: the action is copied from devkit verbatim
           # rather than rendered, so its own default cannot know this project's version.
           python-version: "3.12"
-      - name: Apply migrations
-        run: uv run python -m alembic upgrade head
       - name: Application suite
         id: application-suite
         run: uv run python scripts/run-tests.py

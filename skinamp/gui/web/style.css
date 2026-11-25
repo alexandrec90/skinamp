@@ -1,0 +1,191 @@
+:root {
+  --face: #c0c0c0;
+  --light: #ffffff;
+  --shadow: #808080;
+  --dark: #000000;
+  --title: #000080;
+  --desk: #008080;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--desk);
+  color: var(--dark);
+  font: 13px "MS Sans Serif", Tahoma, sans-serif;
+  padding: 12px;
+}
+
+.window {
+  background: var(--face);
+  border: 2px solid;
+  border-color: var(--light) var(--dark) var(--dark) var(--light);
+  box-shadow: inset -1px -1px 0 var(--shadow);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 3px;
+}
+
+.titlebar {
+  background: var(--title);
+  color: var(--light);
+  font-weight: bold;
+  padding: 3px 6px;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+}
+
+.panel {
+  border: 2px groove var(--light);
+  margin: 0;
+  padding: 10px;
+}
+
+.panel p {
+  margin: 8px 0;
+}
+
+select {
+  background: var(--light);
+  font: inherit;
+  margin-left: 8px;
+  min-width: 180px;
+}
+
+.preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.preview figure {
+  margin: 0;
+  text-align: center;
+  width: 72px;
+}
+
+.preview img {
+  height: 48px;
+  image-rendering: pixelated;
+  width: 48px;
+}
+
+.preview figcaption {
+  font-size: 11px;
+}
+
+.choice {
+  align-items: flex-start;
+  display: flex;
+  gap: 6px;
+  padding: 3px 0;
+}
+
+.choice input {
+  margin: 2px 0 0;
+}
+
+.choice span {
+  display: block;
+}
+
+.choice small {
+  color: #303030;
+  display: block;
+  font-size: 11px;
+}
+
+.choice .admin {
+  color: #000080;
+  font-style: normal;
+  font-weight: bold;
+}
+
+.status {
+  background: var(--light);
+  border: 2px solid;
+  border-color: var(--shadow) var(--light) var(--light) var(--shadow);
+  min-height: 56px;
+  padding: 8px;
+}
+
+.status p {
+  margin: 4px 0 0;
+  white-space: pre-line;
+}
+
+.update {
+  align-items: center;
+  background: #ffffe1;
+  border: 1px solid var(--dark);
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+}
+
+.update[hidden] {
+  display: none;
+}
+
+/* Pinned so "Undo everything" can never scroll out of reach, at any window size. */
+.actions {
+  background: var(--face);
+  bottom: 0;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: auto;
+  padding: 6px 0;
+  position: sticky;
+}
+
+button {
+  background: var(--face);
+  border: 2px solid;
+  border-color: var(--light) var(--dark) var(--dark) var(--light);
+  box-shadow: inset -1px -1px 0 var(--shadow);
+  font: inherit;
+  min-width: 110px;
+  padding: 5px 12px;
+}
+
+button:active:not(:disabled) {
+  border-color: var(--dark) var(--light) var(--light) var(--dark);
+  box-shadow: inset 1px 1px 0 var(--shadow);
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 1px dotted var(--dark);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  color: var(--shadow);
+}
+
+button.primary {
+  outline: 1px solid var(--dark);
+}
+
+#version {
+  color: #303030;
+  font-size: 11px;
+  text-align: right;
+}

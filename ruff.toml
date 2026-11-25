@@ -47,6 +47,13 @@ ignore = ["E101", "E401", "E501", "E701", "E702", "E703", "E731", "E741", "E742"
 # same subprocess allowances as `scripts/**`. These arrive vendored
 # from devkit, so this line must stay in step with devkit's own ruff.toml.
 ".claude/skills/**/*.py" = ["S603", "S607", "S310"]
+# The app's own OS boundary. Every process it starts is a fixed Windows tool or a binary it
+# pinned by hash and unpacked itself, so no input reaches these calls.
+"skinamp/system/explorer.py" = ["S603"]
+"skinamp/system/taskbar.py" = ["S603", "S607"]
+"skinamp/system/win32.py" = ["S603"]
+# The only URLs opened are the https constants pinned in that module.
+"skinamp/targets/retrobar.py" = ["S310"]
 # Tests: asserts (S101) and hardcoded test passwords (S105).
 "tests/**/*.py" = ["S101", "S105"]
 "scripts/hooks/tests/**/*.py" = ["S101", "S105"]

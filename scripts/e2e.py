@@ -4,7 +4,7 @@
 The contract `.claude/rules/local-e2e.md` states, which devkit's nightly `devkit-local-e2e`
 job runs in this checkout: exit 0 green, anything else red, each failure printed as a
 `FAILED <id>` line. It runs the tests marked `local`, which `addopts` deselects from every
-other run, CI's included, because they drive the Docker stack in `docker-compose.yml`,
+other run, CI's included, because they read this workstation's signed-in Windows desktop,
 which no hosted runner has.
 
 **A skip is a failure under the scheduler** (`DEVKIT_E2E` set): the checkout is the one
@@ -15,7 +15,7 @@ and does not fail the run by itself.
 reported as a pass.
 
 **A fixture error is printed as `FAILED` too.** pytest's own line for one says `ERROR`,
-and the failing id is what the fix pass groups by, so a stack that would not start would
+and the failing id is what the fix pass groups by, so a fixture that could not start would
 otherwise be signed by an exit code alone.
 
 **pytest runs under the checkout's `.venv`**, else this interpreter: a VS Code task or
@@ -27,7 +27,7 @@ Tested in `tests/test_e2e.py`.
 
 Usage:
     python scripts/e2e.py                                         # the whole tier
-    python scripts/e2e.py tests/test_database_e2e.py::test_x      # those alone, in the tier
+    python scripts/e2e.py tests/test_desktop_e2e.py::test_x       # those alone, in the tier
 """
 
 from __future__ import annotations

@@ -4,16 +4,15 @@ version = "0.1.0"
 description = "Orchestrate theming on windows and applications."
 requires-python = ">=3.12"
 dependencies = [
-  "sqlalchemy>=2.0",
-  "psycopg[binary]>=3.2",
-  # 1.17: `alembic.ini`'s ruff hooks are `type = module`, which arrived there.
-  "alembic>=1.17",
-  "pydantic-settings>=2.4",
+  "pillow>=13.0.0",
+  "pywebview>=6.2.1",
+  "velopack>=1.2.161",
+  "psutil>=7.2.2",
+  "pywin32>=312 ; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
-# Host-only toolchain. Deliberately NOT installed into the container image — it is
-# several hundred MB of tooling the runtime never imports.
+# The toolchain. PyInstaller leaves it out of the executable, because the app never imports it.
 dev = [
   "ruff>=0.15",
   "mypy>=1.11",
@@ -24,6 +23,7 @@ dev = [
   # so the version is pinned with everything else, and so `session-start.sh` can wire the
   # git hook right after `uv sync` without a separate bootstrap step.
   "pre-commit>=4.6",
+  "pyinstaller>=6.22.3",
 ]
 
 [build-system]
@@ -32,6 +32,10 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
+include = ["skinamp*"]
+
+[tool.setuptools.package-data]
+skinamp = ["gui/web/*"]
 
 [tool.pytest.ini_options]
 # `testpaths` is what keeps `scripts/hooks/tests/` out of the application suite —
@@ -41,13 +45,13 @@ testpaths = ["tests/"]
 # `-p devkit_temproot` is the vendored plugin giving each run a temp root of its own, so a
 # run elsewhere on the machine cannot fail this one at exit; `pythonpath` is where it lives.
 # `-m "not local"` keeps the local end-to-end tier out of every run but its own: those
-# tests need this workstation (the Docker stack), which no hosted runner has, and
+# tests need this workstation (its signed-in Windows desktop), which no hosted runner has, and
 # deselection rather than a skip is what keeps them off one. `scripts/e2e.py` runs them,
 # its `-m local` replacing this one (`.claude/rules/local-e2e.md`).
 addopts = '-m "not local" -p devkit_temproot'
 pythonpath = ["scripts/pytest-plugins"]
 markers = [
-  "local: needs this workstation (the Docker stack), not a runner; run nightly by scripts/e2e.py",
+  "local: needs this workstation (its Windows desktop), not a runner; run nightly by scripts/e2e.py",
 ]
 
 [tool.mypy]
@@ -62,3 +66,19 @@ disable_error_code = ["annotation-unchecked"]
 # and `sync-devkit.py --check` fails if this repo edits it). Type-checking it here
 # only produces errors this repo is not allowed to fix.
 exclude = '^scripts/(hooks/|sync-harness\.py)'
+
+# These publish no type information, and the gate cannot install Windows-only stubs anyway.
+[[tool.mypy.overrides]]
+module = [
+  "psutil",
+  "pythoncom",
+  "pywintypes",
+  "webview",
+  "win32com.*",
+  "win32con",
+  "win32event",
+  "win32gui",
+  "win32process",
+  "win32ui",
+]
+ignore_missing_imports = true
