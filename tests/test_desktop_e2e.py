@@ -1,4 +1,4 @@
-"""The real desktop end to end: the local tier `scripts/e2e.py` runs.
+"""The real desktop end to end: the CI tier `scripts/e2e.py --ci` runs.
 
 The Linux gate runs everything above `System` against the fake, and the Windows job tests
 `Win32System` one call at a time. Nothing else starts `python -m skinamp` as a user would
@@ -11,9 +11,10 @@ temporary folder, so even the log and the journal folder land there and the user
 all-users Start Menu that `plan` reads through it, and `plan` writes nothing there.
 `apply` and `revert` are never run here.
 
-These need this workstation's desktop, which the Linux runner lacks and the Windows
-runner has no signed-in user for, so they carry the `local` mark that `addopts`
-deselects everywhere but that script.
+These need a signed-in Windows desktop session and nothing of this user's own: a hosted
+`windows-latest` runner has one, the Linux gate does not. So they carry the `ci_e2e` mark
+that `addopts` deselects everywhere but that script, which `PR Gate`'s `E2E` job runs on
+the default branch.
 
 **Nothing here skips** (`.claude/rules/local-e2e.md`): a machine that is not Windows fails
 the test and says so.
@@ -30,7 +31,7 @@ import pytest
 
 from skinamp.themes import get_theme
 
-pytestmark = pytest.mark.local
+pytestmark = pytest.mark.ci_e2e
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 THEME_ID = "retro"
