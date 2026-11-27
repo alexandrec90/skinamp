@@ -36,11 +36,15 @@ class StubUpdater:
         self.installed_on_exit = True
 
 
-def simple_theme():
+def registry_component(component_id, name, needs_admin=False):
     def effects(_context):
-        return [SetRegistry(r"Software\X", "A", RegValue("sz", "new"))]
+        return [SetRegistry(r"Software\X", name, RegValue("sz", "new"))]
 
-    return Theme("simple", "Simple", "", (Component("one", "", "", effects),))
+    return Component(component_id, "", "", effects, needs_admin=needs_admin)
+
+
+def simple_theme():
+    return Theme("simple", "Simple", "", (registry_component("one", "A"),))
 
 
 @pytest.fixture
@@ -57,11 +61,38 @@ def test_data_uri_is_a_png_upscaled_without_smoothing():
     assert decoded.size == (app.PREVIEW_SIZE, app.PREVIEW_SIZE)
 
 
-def test_describe_theme_lists_components_and_previews():
+def test_describe_theme_is_one_card_without_its_parts():
     description = app.describe_theme(retro.THEME_ID)
     assert description["name"] == "Retro"
-    assert len(description["components"]) == len(retro.THEME.components)
+    assert "components" not in description
     assert description["preview"]["computer"].startswith("data:image/png")
+
+
+def test_describe_theme_says_when_windows_will_ask_for_admin(monkeypatch):
+    plain = Theme("plain", "Plain", "", (registry_component("one", "A"),))
+    admin = Theme(
+        "admin",
+        "Admin",
+        "",
+        (registry_component("one", "A"), registry_component("two", "B", needs_admin=True)),
+    )
+    monkeypatch.setitem(THEMES, "plain", plain)
+    monkeypatch.setitem(THEMES, "admin", admin)
+    assert app.describe_theme("plain")["needs_admin"] is False
+    assert app.describe_theme("admin")["needs_admin"] is True
+    assert app.describe_theme(retro.THEME_ID)["needs_admin"] is True
+
+
+def test_apply_always_applies_the_whole_theme(api, system, monkeypatch):
+    theme = Theme(
+        "pair", "Pair", "", (registry_component("one", "A"), registry_component("two", "B"))
+    )
+    monkeypatch.setitem(THEMES, "pair", theme)
+    result = api.apply("pair")
+    assert result["ok"] and result["applied"] == ["one", "two"]
+    assert system.reg_read(r"Software\X", "A") == RegValue("sz", "new")
+    assert system.reg_read(r"Software\X", "B") == RegValue("sz", "new")
+    assert api.get_status()["components"] == ["one", "two"]
 
 
 def test_get_state_reports_version_and_default_status(api):
@@ -71,7 +102,7 @@ def test_get_state_reports_version_and_default_status(api):
 
 
 def test_apply_then_revert(api, system):
-    result = api.apply("simple", ["one"])
+    result = api.apply("simple")
     assert result["ok"] and result["changes"] == 1
     assert api.get_status()["theme"] == "simple"
     undone = api.revert()
@@ -81,14 +112,14 @@ def test_apply_then_revert(api, system):
 
 def test_failed_apply_comes_back_as_data(api, system):
     system.fail_writes_to = {"A"}
-    result = api.apply("simple", ["one"])
+    result = api.apply("simple")
     assert result["ok"] is False
     assert result["rolled_back"] is True
     assert "cannot write A" in result["error"]
 
 
 def test_unknown_theme_comes_back_as_data(api):
-    result = api.apply("nope", [])
+    result = api.apply("nope")
     assert result["ok"] is False
     assert "nope" in result["error"]
 

@@ -3,66 +3,85 @@
 const element = (id) => document.getElementById(id);
 const state = { themes: [], busy: false, status: null };
 
+// Not a theme Skinamp applies: choosing it undoes whatever theme is on.
+const DEFAULT_CARD = {
+  id: "default",
+  name: "Default",
+  description: "Your own desktop, exactly as it was before Skinamp changed anything.",
+  preview: {},
+  needs_admin: false,
+};
+
 const STATUS_TEXT = {
   default: ["Your own desktop", "Nothing is changed."],
-  applying: ["Interrupted", "A theme was only partly applied. Undo to clean up."],
-  reverting: ["Undo not finished", "Some changes could not be undone yet. Undo again."],
+  applying: ["Interrupted", "A theme was only partly applied. Choose Default to clean up."],
+  reverting: ["Undo not finished", "Some changes could not be undone yet. Choose Default again."],
   unreadable: ["Undo record unreadable", ""],
 };
 
-function currentTheme() {
-  return state.themes.find((theme) => theme.id === element("theme").value);
+function activeId() {
+  const status = state.status;
+  if (!status) return null;
+  if (status.state === "default") return DEFAULT_CARD.id;
+  if (status.state === "applied") return status.theme;
+  // Part-applied or part-undone: nothing is fully on, so every card stays choosable.
+  return null;
 }
 
-function selectedComponents() {
-  return [...document.querySelectorAll("#components input:checked")].map((box) => box.value);
-}
-
-function renderTheme() {
-  const theme = currentTheme();
-  element("theme-description").textContent = theme.description;
-  const preview = element("preview");
-  preview.replaceChildren(
+function card(theme) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "card";
+  button.dataset.id = theme.id;
+  const title = document.createElement("strong");
+  title.textContent = theme.name;
+  const preview = document.createElement("div");
+  preview.className = "preview";
+  preview.append(
     ...Object.entries(theme.preview).map(([name, source]) => {
-      const figure = document.createElement("figure");
       const image = document.createElement("img");
       image.src = source;
       image.alt = "";
-      const caption = document.createElement("figcaption");
-      caption.textContent = name;
-      figure.append(image, caption);
-      return figure;
+      image.title = name;
+      return image;
     }),
   );
-  const list = element("components");
-  list.replaceChildren(
-    ...theme.components.map((component) => {
-      const label = document.createElement("label");
-      label.className = "choice";
-      const box = document.createElement("input");
-      box.type = "checkbox";
-      box.value = component.id;
-      box.checked = true;
-      const text = document.createElement("span");
-      const detail = document.createElement("small");
-      text.textContent = component.title;
-      detail.textContent = component.description;
-      if (component.needs_admin) {
-        const badge = document.createElement("em");
-        badge.className = "admin";
-        badge.textContent = "Windows will ask for admin permission";
-        detail.append(" ", badge);
-      }
-      text.append(detail);
-      label.append(box, text);
-      return label;
-    }),
-  );
+  if (theme.id === DEFAULT_CARD.id) preview.classList.add("plain");
+  const description = document.createElement("small");
+  description.textContent = theme.description;
+  button.append(title, preview, description);
+  if (theme.needs_admin) {
+    const badge = document.createElement("em");
+    badge.className = "admin";
+    badge.textContent = "Windows will ask for admin permission";
+    button.append(badge);
+  }
+  button.addEventListener("click", () => choose(theme));
+  return button;
+}
+
+function renderCards() {
+  element("themes").replaceChildren(...[DEFAULT_CARD, ...state.themes].map(card));
+}
+
+function syncCards() {
+  const active = activeId();
+  for (const button of document.querySelectorAll(".card")) {
+    const on = button.dataset.id === active;
+    button.setAttribute("aria-pressed", String(on));
+    button.disabled = state.busy || on;
+  }
+  // Restarting exits the process, so it must not cut an apply or undo short.
+  element("restart").disabled = state.busy;
 }
 
 function showMessage(title, detail = "") {
   element("status-title").textContent = title;
   element("status-detail").textContent = detail;
+}
+
+function themeName(id) {
+  return state.themes.find((theme) => theme.id === id)?.name ?? id;
 }
 
 function renderStatus(status) {
@@ -71,17 +90,9 @@ function renderStatus(status) {
   if (known) {
     showMessage(known[0], status.error || known[1]);
   } else {
-    const parts = status.components.join(", ");
-    showMessage(`${status.theme} theme is on`, `${status.changes} changes, all undoable: ${parts}`);
+    showMessage(`${themeName(status.theme)} is on`, `${status.changes} changes, all undoable.`);
   }
-  syncButtons();
-}
-
-function syncButtons() {
-  const nothingToUndo = !state.status || state.status.state === "default";
-  element("apply").disabled = state.busy;
-  element("revert").disabled = state.busy || nothingToUndo;
-  element("restart").disabled = state.busy;
+  syncCards();
 }
 
 function renderUpdate(update) {
@@ -116,23 +127,22 @@ function describeRevert(result) {
 
 async function run(startMessage, action) {
   state.busy = true;
-  syncButtons();
+  syncCards();
   showMessage(startMessage);
   try {
     return await action();
   } finally {
     state.busy = false;
-    syncButtons();
+    syncCards();
   }
 }
 
-async function applyTheme() {
+async function applyTheme(theme) {
   const api = window.pywebview.api;
-  const theme = currentTheme();
-  const result = await run("Applying…", () => api.apply(theme.id, selectedComponents()));
+  const result = await run(`Switching to ${theme.name}…`, () => api.apply(theme.id));
   renderStatus(await api.get_status());
   if (result.ok) {
-    showMessage(`${theme.name} theme is on`, describeApply(result));
+    showMessage(`${theme.name} is on`, describeApply(result));
   } else {
     const after = result.rolled_back ? "Everything was put back." : result.pending.join("\n");
     showMessage("That didn't work", `${result.error}\n${after}`);
@@ -141,7 +151,7 @@ async function applyTheme() {
 
 async function revertTheme() {
   const api = window.pywebview.api;
-  const result = await run("Undoing…", () => api.revert());
+  const result = await run("Going back to your own desktop…", () => api.revert());
   renderStatus(await api.get_status());
   if (result.error) {
     showMessage("That didn't work", result.error);
@@ -150,19 +160,17 @@ async function revertTheme() {
   }
 }
 
+function choose(theme) {
+  return theme.id === DEFAULT_CARD.id ? revertTheme() : applyTheme(theme);
+}
+
 async function start() {
   const api = window.pywebview.api;
   const initial = await api.get_state();
   state.themes = initial.themes;
-  element("theme").replaceChildren(
-    ...initial.themes.map((theme) => new Option(theme.name, theme.id)),
-  );
   element("version").textContent = `Skinamp ${initial.version}`;
-  renderTheme();
+  renderCards();
   renderStatus(initial.status);
-  element("theme").addEventListener("change", renderTheme);
-  element("apply").addEventListener("click", applyTheme);
-  element("revert").addEventListener("click", revertTheme);
   element("restart").addEventListener("click", restartToUpdate);
   renderUpdate(await api.check_updates());
 }

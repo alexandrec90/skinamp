@@ -10,17 +10,7 @@
     <main class="window">
       <header class="titlebar">Skinamp</header>
       <div class="body">
-        <section class="panel" aria-label="Theme">
-          <label for="theme">Theme</label>
-          <select id="theme"></select>
-          <p id="theme-description"></p>
-          <div id="preview" class="preview"></div>
-        </section>
-
-        <fieldset class="panel">
-          <legend>What to change</legend>
-          <div id="components"></div>
-        </fieldset>
+        <section class="themes" id="themes" aria-label="Themes"></section>
 
         <section class="status" role="status" aria-live="polite">
           <strong id="status-title"></strong>
@@ -32,10 +22,6 @@
           <button id="restart" type="button">Restart and update</button>
         </div>
 
-        <footer class="actions">
-          <button id="apply" type="button" class="primary">Apply theme</button>
-          <button id="revert" type="button">Undo everything</button>
-        </footer>
         <small id="version"></small>
       </div>
     </main>

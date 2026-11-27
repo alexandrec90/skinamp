@@ -34,21 +34,14 @@ def data_uri(image: Image.Image) -> str:
 
 
 def describe_theme(theme_id: str) -> JsonObject:
+    """A theme as one card: it is always applied whole, so its parts are not listed."""
     theme = THEMES[theme_id]
     return {
         "id": theme.id,
         "name": theme.name,
         "description": theme.description,
         "preview": {name: data_uri(image) for name, image in theme.preview().items()},
-        "components": [
-            {
-                "id": c.id,
-                "title": c.title,
-                "description": c.description,
-                "needs_admin": c.needs_admin,
-            }
-            for c in theme.components
-        ],
+        "needs_admin": any(c.needs_admin for c in theme.components),
     }
 
 
@@ -85,10 +78,11 @@ class Api:
         with self._lock:
             self._updater.restart_into_update()
 
-    def apply(self, theme_id: str, components: list[str]) -> JsonObject:
+    def apply(self, theme_id: str) -> JsonObject:
+        """Apply every component of the theme: a theme is never applied in part."""
         with self._lock:
             try:
-                result = self._engine.apply(get_theme(theme_id), components)
+                result = self._engine.apply(get_theme(theme_id))
             except ApplyFailedError as exc:
                 rollback = exc.rollback
                 return {
