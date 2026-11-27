@@ -81,6 +81,7 @@ function syncButtons() {
   const nothingToUndo = !state.status || state.status.state === "default";
   element("apply").disabled = state.busy;
   element("revert").disabled = state.busy || nothingToUndo;
+  element("restart").disabled = state.busy;
 }
 
 function renderUpdate(update) {
@@ -88,8 +89,13 @@ function renderUpdate(update) {
   element("update").hidden = !ready;
   if (ready) {
     element("update-text").textContent =
-      `Version ${update.version} is ready. It installs when you close Skinamp.`;
+      `Version ${update.version} is ready. Restart to update now, or it installs when you close Skinamp.`;
   }
+}
+
+async function restartToUpdate() {
+  // Skinamp exits and relaunches on the new version, so nothing after this runs on success.
+  await run("Restarting to update…", () => window.pywebview.api.restart_to_update());
 }
 
 function describeApply(result) {
@@ -157,7 +163,7 @@ async function start() {
   element("theme").addEventListener("change", renderTheme);
   element("apply").addEventListener("click", applyTheme);
   element("revert").addEventListener("click", revertTheme);
-  element("restart").addEventListener("click", () => api.restart_to_update());
+  element("restart").addEventListener("click", restartToUpdate);
   renderUpdate(await api.check_updates());
 }
 

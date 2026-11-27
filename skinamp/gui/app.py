@@ -81,7 +81,9 @@ class Api:
         return self.get_update()
 
     def restart_to_update(self) -> None:
-        self._updater.restart_into_update()
+        # Restarting exits the process: wait out an apply or undo so it never stops halfway.
+        with self._lock:
+            self._updater.restart_into_update()
 
     def apply(self, theme_id: str, components: list[str]) -> JsonObject:
         with self._lock:
@@ -118,3 +120,5 @@ def run(engine: Engine, updater: Updater) -> None:
         "Skinamp", str(WEB_ROOT / "index.html"), js_api=api, width=width, height=height
     )
     webview.start()
+    # The window closed without "Restart and update": install the update on the way out.
+    updater.install_on_exit()

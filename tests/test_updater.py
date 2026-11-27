@@ -43,15 +43,48 @@ def test_no_update_available():
     assert Updater(lambda: FakeManager()).check_and_download() == UpdateStatus("current")
 
 
-def test_update_downloads_and_installs_on_exit():
+def test_update_downloads_without_queueing_an_install():
+    # A silent installer queued now would race the one "Restart and update" starts.
     manager = FakeManager(UPDATE)
     status = Updater(lambda: manager).check_and_download()
     assert status == UpdateStatus("ready", "1.2.3")
-    assert manager.calls == [
-        ("check",),
-        ("download", UPDATE),
-        ("apply_on_exit", UPDATE, True, False),
-    ]
+    assert manager.calls == [("check",), ("download", UPDATE)]
+
+
+def test_install_on_exit_queues_a_silent_install():
+    manager = FakeManager(UPDATE)
+    instance = Updater(lambda: manager)
+    instance.check_and_download()
+    instance.install_on_exit()
+    assert manager.calls[-1] == ("apply_on_exit", UPDATE, True, False)
+
+
+def test_install_on_exit_without_an_update_does_nothing():
+    manager = FakeManager()
+    instance = Updater(lambda: manager)
+    instance.check_and_download()
+    instance.install_on_exit()
+    assert "apply_on_exit" not in [call[0] for call in manager.calls]
+
+
+def test_install_on_exit_before_any_check_does_nothing():
+    Updater(lambda: FakeManager(UPDATE)).install_on_exit()
+
+
+def test_install_on_exit_failure_does_not_raise():
+    manager = FakeManager(UPDATE, fail_on="apply_on_exit")
+    instance = Updater(lambda: manager)
+    instance.check_and_download()
+    instance.install_on_exit()
+    assert manager.calls[-1][0] == "apply_on_exit"
+
+
+def test_restart_does_not_also_queue_a_silent_install():
+    manager = FakeManager(UPDATE)
+    instance = Updater(lambda: manager)
+    instance.check_and_download()
+    instance.restart_into_update()
+    assert [call[0] for call in manager.calls] == ["check", "download", "restart"]
 
 
 def test_failure_is_a_status_not_an_exception():
