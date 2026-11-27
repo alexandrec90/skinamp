@@ -62,16 +62,22 @@ here is a fork that will disagree with it the first time either is edited.
 
 - **Mock at one seam: `System`.** `tests/fakes.py` is an in-memory `System`, so everything
   above that boundary runs for real on the Linux gate.
-- **`tests/test_win32.py` is the only CI test of real Windows calls.** It runs in the gate's
-  Windows job and must never change how the machine looks: registry tests use the scratch
-  key from `key_prefix`, everything else only reads.
+- **`tests/test_win32.py` is the only CI test of real Windows calls one at a time.** It runs
+  in the gate's Windows job and must never change how the machine looks: registry tests use
+  the scratch key from `key_prefix`, everything else only reads.
 - **Never run `apply` or `revert` against the real desktop from a test or a session
   without asking.** `python -m skinamp plan retro` is read-only and safe.
-- **`local` marker:** a test that needs this workstation's signed-in desktop carries
-  `pytest.mark.local`; `addopts` deselects it everywhere and `python scripts/e2e.py` runs
-  exactly that tier (`.claude/rules/local-e2e.md`). `tests/test_desktop_e2e.py` is its
+- **`ci_e2e` marker:** an end-to-end test that needs a signed-in Windows desktop session,
+  and nothing of this user's own, carries `pytest.mark.ci_e2e`. `addopts` deselects it
+  everywhere and `python scripts/e2e.py --ci` runs exactly that tier, in `PR Gate`'s `E2E`
+  job on `windows-latest`, on the default branch only. `tests/test_desktop_e2e.py` is its
   end-to-end test: it runs `python -m skinamp plan retro` read-only, with its data folders
   redirected to a temporary one.
+- **`local` marker:** only a test that needs this workstation itself (this user's account,
+  profile or hardware) carries `pytest.mark.local`; `python scripts/e2e.py` runs that tier
+  (`.claude/rules/local-e2e.md`). None does today, so `.devkit.toml` sets
+  `[delivery] e2e = "ci"`, which devkit's nightly pass reads as "runs in CI" rather than
+  running the empty tier here.
 
 ## Guardrails
 

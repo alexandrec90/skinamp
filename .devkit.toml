@@ -105,3 +105,7 @@ entrypoints = ["skinamp/gui/web/"]
 
 [frontend]
 enabled = false
+
+[delivery]
+# Every end-to-end test runs in PR Gate's E2E job on windows-latest; no `local` one is left.
+e2e = "ci"

@@ -1,6 +1,6 @@
-"""`scripts/e2e.py`: the local tier's runner and the contract devkit's nightly job reads.
+"""`scripts/e2e.py`: the end-to-end tiers' runner and the contract devkit's nightly job reads.
 
-These run in the ordinary suite: the runner is faked, so no desktop and no `local` test.
+These run in the ordinary suite: the runner is faked, so no desktop and no tier test.
 """
 
 from __future__ import annotations
@@ -84,6 +84,28 @@ def test_named_ids_replace_the_tests_directory() -> None:
     assert "tests" not in argv
     assert argv[3] == "tests/test_x.py::test_y"
     assert "local" in argv
+
+
+def test_pytest_argv_selects_the_marker_it_is_given() -> None:
+    argv = load_e2e().pytest_argv("py", Path("r.xml"), marker="ci_e2e")
+    assert argv[argv.index("-m", 3) + 1] == "ci_e2e"
+    assert "local" not in argv
+
+
+@pytest.mark.parametrize(
+    ("argv", "marker", "named"),
+    [
+        ([], "local", []),
+        (["--ci"], "ci_e2e", []),
+        (["--ci", "tests/test_x.py::test_y"], "ci_e2e", ["tests/test_x.py::test_y"]),
+        (["tests/test_x.py::test_y", "--ci"], "ci_e2e", ["tests/test_x.py::test_y"]),
+        (["tests/test_x.py::test_y"], "local", ["tests/test_x.py::test_y"]),
+    ],
+)
+def test_split_flag_picks_the_tier_and_keeps_the_ids(
+    argv: list[str], marker: str, named: list[str]
+) -> None:
+    assert load_e2e().split_flag(argv) == (marker, named)
 
 
 @pytest.mark.parametrize(
@@ -192,6 +214,29 @@ def test_a_stale_report_cannot_answer_for_this_run(e2e: ModuleType) -> None:
 def test_named_ids_reach_pytest(e2e: ModuleType) -> None:
     _, calls = run_e2e(e2e, junit(passed()), argv=["tests/test_desktop_e2e.py::test_ok"])
     assert "tests/test_desktop_e2e.py::test_ok" in calls[0]
+
+
+def test_the_ci_flag_runs_the_ci_tier_and_is_not_passed_to_pytest(e2e: ModuleType) -> None:
+    argv = ["--ci", "tests/test_desktop_e2e.py::test_ok"]
+    code, calls = run_e2e(e2e, junit(passed()), argv=argv)
+    assert code == 0
+    cmd = calls[0]
+    assert cmd[cmd.index("-m", 3) + 1] == "ci_e2e"
+    assert "--ci" not in cmd
+    assert "tests/test_desktop_e2e.py::test_ok" in cmd
+
+
+def test_the_ci_tier_keeps_the_contract(
+    e2e: ModuleType, capsys: pytest.CaptureFixture[str]
+) -> None:
+    failing = junit(passed(), ended("failure", "test_bad", "boom"))
+    assert run_e2e(e2e, failing, code=1, argv=["--ci"])[0] == 1
+    assert "FAILED tests/test_desktop_e2e.py::test_bad - boom" in capsys.readouterr().out
+    skipping = junit(passed(), ended("skipped", "test_s", "no desktop"))
+    assert run_e2e(e2e, skipping, env={e2e.ENV_FLAG: "1"}, argv=["--ci"])[0] == 1
+    assert "FAILED tests/test_desktop_e2e.py::test_s - skipped" in capsys.readouterr().out
+    assert run_e2e(e2e, junit(), code=0, argv=["--ci"])[0] == 1
+    assert "no ci_e2e test executed" in capsys.readouterr().out
 
 
 def test_output_a_cp1252_console_cannot_encode_is_escaped(
