@@ -1,14 +1,14 @@
 # Skinamp
 
-Theme Windows and your apps from one window, and undo all of it with one button.
+Theme Windows and your apps from one window, and undo all of it with one click.
 
 The first theme is **Retro**: grey bevels, navy title bars, a teal desktop, pixel-art
 cursors and chunky icons.
 
 ## Using it
 
-Run `Skinamp.exe`, tick what you want changed, and press **Apply theme**.
-**Undo everything** puts your desktop back exactly as it was, at any time.
+Run `Skinamp.exe` and click a theme. A theme always applies whole, never in parts.
+**Default** puts your desktop back exactly as it was, at any time.
 
 If the window ever will not open, the same undo works from a terminal:
 
@@ -42,8 +42,8 @@ goes today:
 not close, that part is skipped rather than forced. Browsers that automation started with
 their own `--user-data-dir` are left alone.
 
-**Admin rights** are only needed for what every account shares, so the window says which
-parts ask. Declining the prompt skips those parts and keeps the rest. Skinamp itself never
+**Admin rights** are only needed for what every account shares, so a theme's card says
+when Windows will ask. Declining the prompt skips those parts and keeps the rest. Skinamp itself never
 runs elevated: one small helper does, and it refuses anything outside the list in
 `skinamp/elevated.py`.
 
