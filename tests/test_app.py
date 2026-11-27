@@ -20,12 +20,20 @@ from skinamp.updater import UpdateStatus
 class StubUpdater:
     def __init__(self):
         self.restarted = False
+        self.installed_on_exit = False
+        self.lock_held_on_restart = None
+        self.lock = None
 
     def check_and_download(self):
         return UpdateStatus("ready", "2.0")
 
     def restart_into_update(self):
         self.restarted = True
+        if self.lock is not None:
+            self.lock_held_on_restart = self.lock.locked()
+
+    def install_on_exit(self):
+        self.installed_on_exit = True
 
 
 def registry_component(component_id, name, needs_admin=False):
@@ -142,6 +150,13 @@ def test_updates_flow_through_the_bridge(api):
     assert api._updater.restarted
 
 
+def test_restart_waits_for_apply_and_undo(api):
+    # Restarting exits the process, so it must hold the lock an apply or undo holds.
+    api._updater.lock = api._lock
+    api.restart_to_update()
+    assert api._updater.lock_held_on_restart is True
+
+
 def test_web_files_ship_with_the_package():
     for name in ("index.html", "app.js", "style.css"):
         assert (app.WEB_ROOT / name).is_file()
@@ -154,7 +169,19 @@ def test_run_opens_the_page_with_the_bridge(monkeypatch, system, paths):
         start=lambda: calls.update(started=True),
     )
     monkeypatch.setitem(sys.modules, "webview", fake)
-    app.run(Engine(system, paths), StubUpdater())
+    updater = StubUpdater()
+    app.run(Engine(system, paths), updater)
     assert calls["args"][1].endswith("index.html")
     assert isinstance(calls["kwargs"]["js_api"], Api)
     assert calls["started"]
+
+
+def test_closing_the_window_installs_the_update_on_exit(monkeypatch, system, paths):
+    updater = StubUpdater()
+    fake = SimpleNamespace(
+        create_window=lambda *args, **kwargs: None,
+        start=lambda: setattr(updater, "started", True),
+    )
+    monkeypatch.setitem(sys.modules, "webview", fake)
+    app.run(Engine(system, paths), updater)
+    assert updater.started and updater.installed_on_exit

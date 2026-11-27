@@ -71,6 +71,8 @@ function syncCards() {
     button.setAttribute("aria-pressed", String(on));
     button.disabled = state.busy || on;
   }
+  // Restarting exits the process, so it must not cut an apply or undo short.
+  element("restart").disabled = state.busy;
 }
 
 function showMessage(title, detail = "") {
@@ -98,8 +100,13 @@ function renderUpdate(update) {
   element("update").hidden = !ready;
   if (ready) {
     element("update-text").textContent =
-      `Version ${update.version} is ready. It installs when you close Skinamp.`;
+      `Version ${update.version} is ready. Restart to update now, or it installs when you close Skinamp.`;
   }
+}
+
+async function restartToUpdate() {
+  // Skinamp exits and relaunches on the new version, so nothing after this runs on success.
+  await run("Restarting to update…", () => window.pywebview.api.restart_to_update());
 }
 
 function describeApply(result) {
@@ -164,7 +171,7 @@ async function start() {
   element("version").textContent = `Skinamp ${initial.version}`;
   renderCards();
   renderStatus(initial.status);
-  element("restart").addEventListener("click", () => api.restart_to_update());
+  element("restart").addEventListener("click", restartToUpdate);
   renderUpdate(await api.check_updates());
 }
 

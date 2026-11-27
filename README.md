@@ -104,8 +104,9 @@ To add a theme, add a module beside `themes/retro.py` and register it in
 
 Pushing a tag like `v1.2.3` runs `.github/workflows/release.yml`, which builds the
 executable, packs it with [Velopack](https://velopack.io) and publishes a GitHub Release.
-Installed copies check that release feed when opened, download a found update in the
-background, and install it on exit.
+Installed copies check that release feed when opened and download a found update in the
+background. A "Restart and update" button then appears; otherwise the update installs
+when Skinamp closes.
 
 The executable is not code-signed yet, so Windows SmartScreen warns on first run.
 

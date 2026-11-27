@@ -1,6 +1,7 @@
 """Automatic updates through Velopack, from this repository's GitHub Releases.
 
-A found update downloads in the background and installs when the app exits. An update
+The app checks on launch and downloads a found update in the background. The user can
+then restart into it at once, or let it install silently when the app exits. An update
 problem must never get in the way of theming, or above all of undoing a theme, so every
 failure here becomes a status and nothing raises.
 """
@@ -48,7 +49,6 @@ class Updater:
             if update is None:
                 return UpdateStatus("current")
             self._manager.download_updates(update)
-            self._manager.wait_exit_then_apply_updates(update, silent=True, restart=False)
         except (RuntimeError, OSError) as exc:
             logger.exception("update failed")
             return UpdateStatus("failed", detail=str(exc))
@@ -56,5 +56,20 @@ class Updater:
         return UpdateStatus("ready", update.TargetFullRelease.Version)
 
     def restart_into_update(self) -> None:
+        """Install the downloaded update now and relaunch. Velopack exits this process.
+
+        The install is queued here, not at download time: Velopack starts one waiting
+        installer per call, and a silent one queued earlier would race this one and could
+        finish without relaunching.
+        """
         if self._manager is not None and self._pending is not None:
             self._manager.apply_updates_and_restart(self._pending)
+
+    def install_on_exit(self) -> None:
+        """Queue the downloaded update to install, silently, once this process exits."""
+        if self._manager is None or self._pending is None:
+            return
+        try:
+            self._manager.wait_exit_then_apply_updates(self._pending, silent=True, restart=False)
+        except (RuntimeError, OSError):
+            logger.exception("could not queue the update for exit")
